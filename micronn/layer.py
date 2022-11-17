@@ -7,6 +7,7 @@ class Layer:
 
     def __init__(self):
         self.is_init = False
+        self.is_training = True
         self.weights = {}
         self.params = {}
         self.grads = {}
@@ -15,11 +16,13 @@ class Layer:
         if self.is_init:
             return self.weights
         pass
+        # return {'W': 0, 'b': 0}
 
     def get_weights_grad(self):
         if self.is_init:
             return {i: self.grads[i] for i in self.grads.keys() if 'dW' in i or 'db' in i}
         pass
+        # return {'dW': 0, 'b': 0}
 
     def set_weights(self, weights):
         self.weights = weights
@@ -34,6 +37,7 @@ class Layer:
 class Input(Layer):
     
     def __init__(self, shape):
+        super().__init__()
         self.shape = shape
         self.units = self.shape[0]
 
@@ -69,6 +73,36 @@ class Dense(Layer):
 
         dA = np.dot(self.weights['W'].T, self.grads['dZ'])
         return dA
+
+
+class Dropout(Layer):
+
+    def __init__(self, keep_prob):
+        super().__init__()
+        self.keep_prob = keep_prob
+
+        if not self.is_training:
+            self.keep_prob = 1.0
+
+    def forward(self, A):
+        self.params['A_prev'] = A
+        mask = (np.random.rand(*A.shape) < self.keep_prob).astype('int32')
+        A = A * mask / self.keep_prob
+        return A
+
+    def backward(self, dA, m):
+        mask = (np.random.rand(*dA.shape) < self.keep_prob).astype('int32')
+        dA = dA * mask / self.keep_prob
+        return dA
+
+        
+        
+
+
+
+
+
+    
 
 
 

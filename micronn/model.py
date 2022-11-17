@@ -12,16 +12,21 @@ class Model:
         self.loss_history = []
         self.optimizer = optimizer
         self.regularizer = regularizer
+        self.is_training = True
 
     def _forward(self, X):
         A = X
         for l in range(1, len(self.net)):
+            if not self.is_training:
+                self.net[l].is_training = False
             A = self.net[l].forward(A)
         return A
 
     def _backward(self, loss_grad):
         dA = loss_grad
         for l in range(len(self.net) - 1, 0, -1):
+            if not self.is_training:
+                self.net[l].is_training = False
             dA = self.net[l].backward(dA, self.m)
 
     def _compute_loss(self, pred, target):
@@ -44,11 +49,13 @@ class Model:
                 self.m = mini_x.shape[1]
                 pred = self._forward(mini_x)
                 loss_grad = self._compute_loss(pred, mini_y)
-                self._backward(loss_grad, mini_y)
+                self._backward(loss_grad)
                 self._update()
         self.loss_history = iter_to_epochs_loss(self.loss_history, epochs)
 
     def predict(self, X_test):
+        self.is_training = False
+
         X_test = X_test.T
         pred = self._forward(X_test)
 

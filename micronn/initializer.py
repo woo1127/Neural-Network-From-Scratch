@@ -17,7 +17,7 @@ class HeNormal(Initializer):
         return np.random.randn(*shape) * np.sqrt(2 / shape[1])
 
 
-class XiavierNormal(Initializer):
+class XavierNormal(Initializer):
     
     def init(self, shape):
         return np.random.randn(*shape) * np.sqrt(2 / shape[0] + shape[1])
