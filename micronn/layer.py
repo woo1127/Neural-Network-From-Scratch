@@ -5,6 +5,25 @@ from micronn.activation import Activation, Relu
 
 class Layer:
 
+    def __init__(self):
+        self.is_init = False
+        self.weights = {}
+        self.params = {}
+        self.grads = {}
+
+    def get_weights(self):
+        if self.is_init:
+            return self.weights
+        pass
+
+    def get_weights_grad(self):
+        if self.is_init:
+            return {i: self.grads[i] for i in self.grads.keys() if 'dW' in i or 'db' in i}
+        pass
+
+    def set_weights(self, weights):
+        self.weights = weights
+
     def forward(self):
         raise NotImplementedError
 
@@ -22,27 +41,34 @@ class Input(Layer):
 class Dense(Layer):
 
     def __init__(self, units, activation=Relu(), w_init=HeNormal(), b_init=Zeros()):
+        super().__init__()
         self.units = units 
         self.activation = Activation.get(activation)
         self.w_init = w_init
         self.b_init = b_init
 
-    def init_param(self, curr, prev):
-        w = Initializer.get(self.w_init)([curr, prev])
-        b = Initializer.get(self.b_init)([curr, 1])
-        return w, b
+    def init_weights(self, curr, prev):
+        self.weights['W'] = Initializer.get(self.w_init)([curr, prev])
+        self.weights['b'] = Initializer.get(self.b_init)([curr, 1])
         
-    def forward(self, w, b, A):
-        Z = np.dot(w, A) + b
-        A = self.activation.forward(Z)
-        return Z, A
+    def forward(self, A):
+        if not self.is_init:
+            self.init_weights(self.units, A.shape[0])
+            self.is_init = True
 
-    def backward(self, dA, A, Z, w, m):
-        dZ = dA * self.activation.backward(Z)
-        dW = np.dot(dZ, A.T) / m
-        db = np.sum(dZ, axis=1, keepdims=True) / m
-        dA = np.dot(w.T, dZ)
-        return dZ, dW, db, dA
+        self.params['A_prev'] = A
+        self.params['Z'] = np.dot(self.weights['W'], A) + self.weights['b']
+
+        A = self.activation.forward(self.params['Z'])
+        return A
+
+    def backward(self, dA, m):
+        self.grads['dZ'] = dA * self.activation.backward(self.params['Z'])
+        self.grads['dW'] = np.dot(self.grads['dZ'], self.params['A_prev'].T) / m
+        self.grads['db'] = np.sum(self.grads['dZ'], axis=1, keepdims=True) / m
+
+        dA = np.dot(self.weights['W'].T, self.grads['dZ'])
+        return dA
 
 
 

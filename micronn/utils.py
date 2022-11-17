@@ -16,6 +16,7 @@ def plot_decision_boundary(model, X, y, axes):
     
     grid = np.hstack((r1, r2))
     yhat = model(grid)
+    yhat = np.where(yhat < 0.5, 0, 1)
     zz = yhat.reshape(xx.shape)
     
     axes.contourf(xx, yy, zz)
