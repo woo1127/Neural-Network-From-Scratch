@@ -8,38 +8,25 @@ class Layer:
     def __init__(self):
         self.is_init = False
         self.is_training = True
-        self.weights = {}
-        self.params = {}
-        self.grads = {}
 
     def get_weights(self):
         if self.is_init:
-            return self.weights
-        pass
-        # return {'W': 0, 'b': 0}
+            return self.W, self.b
+        return None, None
+
+    def set_weights(self, weights):
+        self.W, self.b = weights
 
     def get_weights_grad(self):
         if self.is_init:
-            return {i: self.grads[i] for i in self.grads.keys() if 'dW' in i or 'db' in i}
-        pass
-        # return {'dW': 0, 'b': 0}
-
-    def set_weights(self, weights):
-        self.weights = weights
+            return self.dW, self.db
+        return None, None
 
     def forward(self):
         raise NotImplementedError
 
     def backward(self):
         raise NotImplementedError
-
-
-class Input(Layer):
-    
-    def __init__(self, shape):
-        super().__init__()
-        self.shape = shape
-        self.units = self.shape[0]
 
 
 class Dense(Layer):
@@ -52,26 +39,27 @@ class Dense(Layer):
         self.b_init = b_init
 
     def init_weights(self, curr, prev):
-        self.weights['W'] = Initializer.get(self.w_init)([curr, prev])
-        self.weights['b'] = Initializer.get(self.b_init)([curr, 1])
+        self.W = Initializer.get(self.w_init)([curr, prev])
+        self.b = Initializer.get(self.b_init)([curr, 1])
         
     def forward(self, A):
         if not self.is_init:
             self.init_weights(self.units, A.shape[0])
             self.is_init = True
 
-        self.params['A_prev'] = A
-        self.params['Z'] = np.dot(self.weights['W'], A) + self.weights['b']
+        self.A_prev = A
+        self.Z = np.dot(self.W, A) + self.b
 
-        A = self.activation.forward(self.params['Z'])
+        A = self.activation.forward(self.Z)
         return A
 
     def backward(self, dA, m):
-        self.grads['dZ'] = dA * self.activation.backward(self.params['Z'])
-        self.grads['dW'] = np.dot(self.grads['dZ'], self.params['A_prev'].T) / m
-        self.grads['db'] = np.sum(self.grads['dZ'], axis=1, keepdims=True) / m
+        self.dZ = dA * self.activation.backward(self.Z)
+        self.dW = np.dot(self.dZ, self.A_prev.T) / m
+        self.db = np.sum(self.dZ, axis=1, keepdims=True) / m
 
-        dA = np.dot(self.weights['W'].T, self.grads['dZ'])
+        dA = np.dot(self.W.T, self.dZ)
+
         return dA
 
 
@@ -85,7 +73,7 @@ class Dropout(Layer):
             self.keep_prob = 1.0
 
     def forward(self, A):
-        self.params['A_prev'] = A
+        self.A_prev = A
         mask = (np.random.rand(*A.shape) < self.keep_prob).astype('int32')
         A = A * mask / self.keep_prob
         return A
@@ -94,25 +82,4 @@ class Dropout(Layer):
         mask = (np.random.rand(*dA.shape) < self.keep_prob).astype('int32')
         dA = dA * mask / self.keep_prob
         return dA
-
-        
-        
-
-
-
-
-
-    
-
-
-
-
-
-
-
-
-
-
-
-        
 

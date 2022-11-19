@@ -16,18 +16,18 @@ class Model:
 
     def _forward(self, X):
         A = X
-        for l in range(1, len(self.net)):
+        for layer in self.net:
             if not self.is_training:
-                self.net[l].is_training = False
-            A = self.net[l].forward(A)
+                layer.is_training = False
+            A = layer.forward(A)
         return A
 
     def _backward(self, loss_grad):
         dA = loss_grad
-        for l in range(len(self.net) - 1, 0, -1):
+        for layer in reversed(self.net):
             if not self.is_training:
-                self.net[l].is_training = False
-            dA = self.net[l].backward(dA, self.m)
+                layer.is_training = False
+            dA = layer.backward(dA, self.m)
 
     def _compute_loss(self, pred, target):
         loss_grad = self.loss.grad(pred, target)
@@ -42,7 +42,6 @@ class Model:
 
     def fit(self, X, y, batch_size=32, epochs=10):
         X, y = X.T, y.reshape((1, -1))
-        self.net.insert(0, Input([X.shape[0], X.shape[1]]))
         
         for _ in trange(epochs):
             for mini_x, mini_y in create_mini_batches(X, y, batch_size):

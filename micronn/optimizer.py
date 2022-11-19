@@ -9,8 +9,8 @@ class Optimizer:
     def update(self):
         raise NotImplementedError
 
-    def init_optim_grad(self, grads):
-        return np.where(grads['dW'], 0, grads['dW']), np.where(grads['db'], 0, grads['db'])
+    def init_optim_grad(self, dW, db):
+        return np.where(dW, 0, dW), np.where(db, 0, db)
 
     
 class GD(Optimizer):
@@ -23,20 +23,20 @@ class GD(Optimizer):
 
     def update(self, net):
         for layer, i in zip(net, range(1, len(net))):
-            weights = layer.get_weights()
-            grads = layer.get_weights_grad()
+            W, b = layer.get_weights()
+            dW, db = layer.get_weights_grad()
 
-            if grads and weights:
+            if np.any(W) and np.any(dW):
                 if not self.is_init:
-                    self.v['dW' + str(i)], self.v['db' + str(i)] = self.init_optim_grad(grads)
+                    self.v['dW' + str(i)], self.v['db' + str(i)] = self.init_optim_grad(dW, db)
 
-                self.v['dW' + str(i)] = self.beta * self.v['dW' + str(i)] + (1 - self.beta) * grads['dW']
-                self.v['db' + str(i)] = self.beta * self.v['db' + str(i)] + (1 - self.beta) * grads['db']
+                self.v['dW' + str(i)] = self.beta * self.v['dW' + str(i)] + (1 - self.beta) * dW
+                self.v['db' + str(i)] = self.beta * self.v['db' + str(i)] + (1 - self.beta) * db
 
-                weights['W'] -= self.lr * self.v['dW' + str(i)]
-                weights['b'] -= self.lr * self.v['db' + str(i)]
+                W -= self.lr * self.v['dW' + str(i)]
+                b -= self.lr * self.v['db' + str(i)]
 
-                layer.set_weights({'W': weights['W'], 'b': weights['b']})
+                layer.set_weights((W, b))
 
         self.is_init = True
 
@@ -53,20 +53,20 @@ class RMSprop(Optimizer):
     def update(self, net):
 
         for layer, i in zip(net, range(len(net))):
-            weights = layer.get_weights()
-            grads = layer.get_weights_grad()
+            W, b = layer.get_weights()
+            dW, db = layer.get_weights_grad()
 
-            if grads and weights:
+            if np.any(W) and np.any(dW):
                 if not self.is_init:
-                    self.s['dW' + str(i)], self.s['db' + str(i)] = self.init_optim_grad(grads)
+                    self.s['dW' + str(i)], self.s['db' + str(i)] = self.init_optim_grad(dW, db)
 
-                self.s['dW' + str(i)] = self.beta * self.s['dW' + str(i)] + (1 - self.beta) * np.square(grads['dW'])
-                self.s['db' + str(i)] = self.beta * self.s['db' + str(i)] + (1 - self.beta) * np.square(grads['db'])
+                self.s['dW' + str(i)] = self.beta * self.s['dW' + str(i)] + (1 - self.beta) * np.square(dW)
+                self.s['db' + str(i)] = self.beta * self.s['db' + str(i)] + (1 - self.beta) * np.square(db)
 
-                weights['W'] -= self.lr * grads['dW'] / np.sqrt(self.s['dW' + str(i)] + self.epsilon)
-                weights['b'] -= self.lr * grads['db'] / np.sqrt(self.s['db' + str(i)] + self.epsilon)
+                W -= self.lr * dW / np.sqrt(self.s['dW' + str(i)] + self.epsilon)
+                b -= self.lr * db / np.sqrt(self.s['db' + str(i)] + self.epsilon)
 
-                layer.set_weights({'W': weights['W'], 'b': weights['b']})
+                layer.set_weights((W, b))
                 
         self.is_init = True
 
@@ -87,25 +87,25 @@ class Adam(Optimizer):
         self.iter_t += 1
 
         for layer, i in zip(net, range(len(net))):
-            weights = layer.get_weights()
-            grads = layer.get_weights_grad()
+            W, b = layer.get_weights()
+            dW, db = layer.get_weights_grad()
 
-            if grads and weights:
+            if np.any(W) and np.any(dW):
                 if not self.is_init:
-                    self.v['dW' + str(i)], self.v['db' + str(i)] = self.init_optim_grad(grads)
-                    self.s['dW' + str(i)], self.s['db' + str(i)] = self.init_optim_grad(grads)
+                    self.v['dW' + str(i)], self.v['db' + str(i)] = self.init_optim_grad(dW, db)
+                    self.s['dW' + str(i)], self.s['db' + str(i)] = self.init_optim_grad(dW, db)
 
-                bias_corrected_v = (1 - self.beta1 ** self.iter_t)
-                bias_corrected_s = (1 - self.beta2 ** self.iter_t)
+                bias_v = (1 - self.beta1 ** self.iter_t)
+                bias_s = (1 - self.beta2 ** self.iter_t)
 
-                self.v['dW' + str(i)] = self.beta1 * self.v['dW' + str(i)] + (1 - self.beta1) * grads['dW'] / bias_corrected_v
-                self.v['db' + str(i)] = self.beta1 * self.v['db' + str(i)] + (1 - self.beta1) * grads['db'] / bias_corrected_v
-                self.s['dW' + str(i)] = self.beta2 * self.s['dW' + str(i)] + (1 - self.beta2) * np.square(grads['dW']) / bias_corrected_s
-                self.s['db' + str(i)] = self.beta2 * self.s['db' + str(i)] + (1 - self.beta2) * np.square(grads['db']) / bias_corrected_s
+                self.v['dW' + str(i)] = self.beta1 * self.v['dW' + str(i)] + (1 - self.beta1) * dW / bias_v
+                self.v['db' + str(i)] = self.beta1 * self.v['db' + str(i)] + (1 - self.beta1) * db / bias_v
+                self.s['dW' + str(i)] = self.beta2 * self.s['dW' + str(i)] + (1 - self.beta2) * np.square(dW) / bias_s
+                self.s['db' + str(i)] = self.beta2 * self.s['db' + str(i)] + (1 - self.beta2) * np.square(db) / bias_s
 
-                weights['W'] -= self.lr * self.v['dW' + str(i)] / np.sqrt(self.s['dW' + str(i)] + self.epsilon)
-                weights['b'] -= self.lr * self.v['db' + str(i)] / np.sqrt(self.s['db' + str(i)] + self.epsilon)
+                W -= self.lr * self.v['dW' + str(i)] / np.sqrt(self.s['dW' + str(i)] + self.epsilon)
+                b -= self.lr * self.v['db' + str(i)] / np.sqrt(self.s['db' + str(i)] + self.epsilon)
 
-                layer.set_weights({'W': weights['W'], 'b': weights['b']})
+                layer.set_weights((W, b))
                 
         self.is_init = True
