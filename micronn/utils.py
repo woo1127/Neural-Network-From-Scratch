@@ -1,3 +1,4 @@
+from itertools import permutations
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -27,19 +28,20 @@ def create_mini_batches(X, y, batch_size):
     X, y = X.T, y.T
 
     m = X.shape[0]
-    data = np.hstack((X, y))
-    np.random.shuffle(data)
-
     num_of_batch = m // batch_size
 
-    for t in range(num_of_batch):
-        mini_x = data[t * batch_size: (t + 1) * batch_size, :-1]
-        mini_y = data[t * batch_size: (t + 1) * batch_size, -1]
-        yield (mini_x.T, mini_y.T)
+    permutation = list(np.random.permutation(m))
+    shuffle_X = X[permutation, :]
+    shuffle_y = y[permutation, :]
 
+    for t in range(num_of_batch):
+        mini_x = shuffle_X[t * batch_size: (t + 1) * batch_size, :]
+        mini_y = shuffle_y[t * batch_size: (t + 1) * batch_size, :]
+        yield (mini_x.T, mini_y.T)
+    
     if m % batch_size != 0:
-        mini_x = data[m // batch_size * batch_size: , :-1]
-        mini_y = data[m // batch_size * batch_size: , -1]
+        mini_x = shuffle_X[m // batch_size * batch_size: , :]
+        mini_y = shuffle_y[m // batch_size * batch_size: , :]
         yield (mini_x.T, mini_y.T)
 
 
@@ -53,3 +55,8 @@ def iter_to_epochs_loss(loss_history, num_of_epochs):
 
     return loss_batch
 
+
+def reshape_dimension(X, y):
+    if y.ndim == 1:
+        return X.T, y.reshape((1, -1))
+    return X.T, y.T

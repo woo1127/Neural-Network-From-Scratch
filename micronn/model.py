@@ -1,6 +1,5 @@
 import numpy as np
-from micronn.layer import Input
-from micronn.utils import create_mini_batches, iter_to_epochs_loss
+from micronn.utils import create_mini_batches, iter_to_epochs_loss, reshape_dimension
 from tqdm import trange
 
 
@@ -41,7 +40,7 @@ class Model:
         self.optimizer.update(self.net)
 
     def fit(self, X, y, batch_size=32, epochs=10):
-        X, y = X.T, y.reshape((1, -1))
+        X, y = reshape_dimension(X, y)
         
         for _ in trange(epochs):
             for mini_x, mini_y in create_mini_batches(X, y, batch_size):
@@ -58,5 +57,5 @@ class Model:
         X_test = X_test.T
         pred = self._forward(X_test)
 
-        return pred.ravel()
+        return pred
         

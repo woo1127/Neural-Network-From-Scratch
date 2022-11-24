@@ -54,12 +54,11 @@ class Dense(Layer):
         return A
 
     def backward(self, dA, m):
-        self.dZ = dA * self.activation.backward(self.Z)
+        self.dZ = self.activation.backward(dA, self.Z)
         self.dW = np.dot(self.dZ, self.A_prev.T) / m
         self.db = np.sum(self.dZ, axis=1, keepdims=True) / m
 
         dA = np.dot(self.W.T, self.dZ)
-
         return dA
 
 
