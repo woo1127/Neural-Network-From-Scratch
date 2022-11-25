@@ -1,6 +1,5 @@
 import numpy as np
 
-
 class Activation:
 
     def forward(self):
@@ -57,27 +56,41 @@ class Tanh(Activation):
 class Softmax(Activation):
 
     def forward(self, Z):
-        Z_exp = np.exp(Z - np.max(Z))
-        return Z_exp / np.sum(Z_exp, axis=0, keepdims=True)
+        exps = np.exp(Z - np.max(Z, axis=0, keepdims=True))
+        return exps / np.sum(exps, axis=0, keepdims=True)
         
     def backward(self, dA, Z):
-        # initialise a random array to store the value of gradient
-        dL_dZ = np.zeros_like(Z, dtype=np.float32)
+        S = self.forward(Z)
+        zeros = np.eye(S.shape[0])
 
-        # transpose the values to loop the column instead of row
-        for dl_da, z, i in zip(dA.T, Z.T, range(Z.shape[1])):
-            # transform from 1D to 2D
-            z = np.expand_dims(z, 1)
-            dl_da = np.expand_dims(dl_da, 1)
+        diagflat = np.einsum('ij,jk->kij', zeros, S)
+        ss = np.einsum('ij,jk->jik', S, S.T)
 
-            s = self.forward(z)
-            da_dz = np.diagflat(s) - np.dot(s, s.T)
-            dl_dz = - np.dot(da_dz, dl_da)
-            # flatten from 2D to 1D and store the value of gradient
-            dL_dZ[:, i] = dl_dz.flatten()
-            
-        return dL_dZ
+        dA_dZ = diagflat - ss
+        dA = np.expand_dims(dA, 1).T
+
+        dZ = - np.matmul(dA, dA_dZ).T
+        dZ = dZ.reshape(dZ.shape[0], dZ.shape[1] * dZ.shape[2])
+
+        return dZ
         
+    # def backward(self, dA, Z):
+    #     # initialise a random array to store the value of gradient
+    #     dZ = np.zeros_like(Z, dtype=np.float32)
+
+    #     # transpose the values to loop the column instead of row
+    #     for da, z, i in zip(dA.T, Z.T, range(Z.shape[1])):
+    #         # transform from 1D to 2D
+    #         z = np.expand_dims(z, 1)
+    #         da = np.expand_dims(da, 1)
+
+    #         s = self.forward(z)
+    #         da_dz = np.diagflat(s) - np.dot(s, s.T)
+    #         dz = - np.dot(da_dz, da)
+    #         # flatten from 2D to 1D and store the value of gradient
+    #         dZ[:, i] = dz.flatten()
         
+    #     return dZ
+
         
-        
+    
